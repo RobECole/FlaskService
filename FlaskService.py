@@ -36,6 +36,7 @@ def lastgame():
     ON S.champion_id = C.id
     WHERE P.summoner_id = 45979934
     ;""")
+    #print
     name = [{'name': name} for (name,) in cursor.fetchall()]
     cname = [{'cname': cname} for (cname,) in cursor.fetchall()]
     kills = []
