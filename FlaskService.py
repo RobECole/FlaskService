@@ -24,25 +24,45 @@ def update(name):
         match_id = matches[0]['matchId']
 
 
-@app.route('/api/lastGame', methods=['GET', 'POST'])
-def lastgame():
+@app.route('/api/lastGame/<int:summonerid>')
+def lastgame(summonerid):
     cursor.execute("""SELECT P.summoner_name,C.name, S.kills
     FROM "league"."player" AS P
     LEFT JOIN "league"."match_stats" AS S
     ON P.Recent_games_id=S.Match_id AND P.summoner_id = S.summoner_id
     LEFT JOIN "league"."champname" AS C
     ON S.champion_id = C.id
-    WHERE P.summoner_id = 45979934
+    WHERE P.summoner_id = {0}
+    ;""", summonerid)
+    data = [
+        {'sumname': summoner_name,
+         'championname': name,
+         'kills': kills}
+        for (summoner_name, name, kills) in cursor.fetchall()]
+    print data
+    return jsonify({'data': data})
+
+
+@app.route('/api/usedFree')
+def usedfree():
+    cursor.execute("""SELECT P.summoner_name
+    FROM "league2"."player" AS P, "league2"."match" AS M, "league2"."champname" AS C
+    WHERE P.recent_games_id = M.match_id AND M.champion_id = ANY (SELECT champ_id
+    FROM "league"."champion"
+    WHERE free_to_play='true')
+    GROUP BY P.summoner_name
     ;""")
+    data = [{'sumname': summoner_name} for (summoner_name,) in cursor.fetchall()]
+    print data
+    return jsonify({'data': data})
 
 
-
-
-@app.route('/api/freeChamps', methods=['GET', 'POST'])
+@app.route('/api/')
+@app.route('/api/freeChamps')
 def freechamps():
     cursor.execute("""SELECT CN.Name
-    FROM LEAGUE.CHAMPION AS C
-    RIGHT JOIN LEAGUE.CHAMPNAME AS CN ON CN.ID = C.Champ_id
+    FROM LEAGUE2.CHAMPION AS C
+    RIGHT JOIN LEAGUE2.CHAMPNAME AS CN ON CN.ID = C.Champ_id
     WHERE Free_to_play = 'true'""")
     data = [{'name': name} for (name,) in cursor.fetchall()]
     print data
