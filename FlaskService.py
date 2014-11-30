@@ -73,7 +73,7 @@ def champdata():
             for (name, ranked_play_enabled, bot_enabled, free_to_play) in cursor.fetchall()]
     print champ
     return jsonify({'champ': champ})
-
+#tat
 
 @app.route('/api/freeChamps')
 def freechamps():
