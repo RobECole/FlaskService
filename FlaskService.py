@@ -42,13 +42,14 @@ def pleb():
     return jsonify({'pleb': pleb})
 
 
-@app.route('/api/topkills')
-def topkills():
+@app.route('/api/topkills/<int:matchid')
+def topkills(matchid):
     cursor.execute("""SELECT P.Summoner_name,C.name, S.kills
     FROM "league"."player" AS P, "league"."match_stats" AS S, "league"."champname" AS C, "league"."match" AS M
     WHERE P.game_id = M.match_id AND P.summoner_id = M.summoner_id AND M.participant_id = S.participant_id AND C.id = S.champion_id AND S.kills > (
      SELECT AVG(kills)
-     from "league"."match_stats")
+     from "league"."match_stats"
+     WHERE )
     GROUP BY P.summoner_name,C.name, S.kills ORDER BY P.summoner_name
     ;""")
     top = [{'sumname': summoner_name,
