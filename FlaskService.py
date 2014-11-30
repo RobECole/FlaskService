@@ -1,24 +1,22 @@
 from flask import Flask, jsonify
 import psycopg2
-import riotwatcher
 app = Flask(__name__)
 
 conn_string = "host='localhost' dbname='LEAGUE_CIRCUIT' user='postgres' password='testdb'"
 conn = psycopg2.connect(conn_string)
 cursor = conn.cursor()
-key = '1dbf97cc-5028-4196-a05c-6645adc80bef'
-w = riotwatcher.RiotWatcher(key)
+
 
 #comment
 
 @app.route('/api/lastGame/<int:summonerid>')
 def lastgame(summonerid):
-    cursor.execute("""SELECT P.summoner_name,C.name, S.kills
+    cursor.execute("""SELECT M.summoner_id,C.name, S.kills
     FROM "league"."player" AS P
     LEFT JOIN "league"."match" AS M
-    ON P.game_id = M.Match_id AND P.summoner_id = M.Summoner_id
+    ON P.game_id = M.Match_id
     LEFT JOIN "league"."match_stats" AS S
-    ON M.participant_id = S.participant_id
+    ON M.participant_id = S.participant_id AND M.Match_id = S.Match_id
     LEFT JOIN "league"."champname" AS C
     ON S.champion_id = C.id
     WHERE P.summoner_id = '{0}'
@@ -30,6 +28,23 @@ def lastgame(summonerid):
         for (summoner_name, name, kills) in cursor.fetchall()]
     print last
     return jsonify({'last': last})
+
+
+@app.route('/api/topkills')
+def topkills():
+    cursor.execute("""SELECT P.Summoner_name,C.name, S.kills
+    FROM "league"."player" AS P, "league"."match_stats" AS S, "league"."champname" AS C, "league"."match" AS M
+    WHERE P.game_id = M.match_id AND P.summoner_id = M.summoner_id AND M.participant_id = S.participant_id AND C.id = S.champion_id AND S.kills > (
+     SELECT AVG(kills)
+     from "league"."match_stats")
+    GROUP BY P.summoner_name,C.name, S.kills ORDER BY P.summoner_name
+    ;""")
+    top = [{'sumname': summoner_name,
+             'champname': name,
+             'kills': kills}
+            for (summoner_name, name, kills) in cursor.fetchall()]
+    print top
+    return jsonify({'top': top})
 
 
 @app.route('/api/freeChamps')
