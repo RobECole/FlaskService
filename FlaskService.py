@@ -1,7 +1,5 @@
 from flask import Flask, jsonify
-import json
 import psycopg2
-import requests
 import riotwatcher
 app = Flask(__name__)
 
@@ -46,8 +44,8 @@ def lastgame(summonerid):
 @app.route('/api/usedFree')
 def usedfree():
     cursor.execute("""SELECT P.summoner_name
-    FROM "league2"."player" AS P, "league2"."match" AS M, "league2"."champname" AS C
-    WHERE P.recent_games_id = M.match_id AND M.champion_id = ANY (SELECT champ_id
+    FROM "league"."player" AS P, "league"."match" AS M, "league"."champname" AS C
+    WHERE P.game_id = M.match_id AND M.champion_id = ANY (SELECT champ_id
     FROM "league"."champion"
     WHERE free_to_play='true')
     GROUP BY P.summoner_name
@@ -57,7 +55,37 @@ def usedfree():
     return jsonify({'data': data})
 
 
-@app.route('/api/')
+@app.route('/api/charkills')
+def charkills():
+    cursor.execute("""SELECT P.Summoner_name,C.name, S.kills
+    FROM "league"."player" AS P, "league"."match_stats" AS S, "league"."champname" AS C, "league"."match" AS M
+    WHERE P.game_id = M.match_id AND P.summoner_id = M.summoner_id AND M.participant_id = S.participant_id AND C.id = S.champion_id AND S.kills > (
+     SELECT AVG(kills)
+     from "league"."match_stats")
+    GROUP BY P.summoner_name,C.name, S.kills ORDER BY P.summoner_name
+    ;""")
+    data = [{'sumname': summoner_name,
+             'champname': name,
+             'kills': kills}
+            for (summoner_name, name, kills) in cursor.fetchall()]
+    print data
+    return jsonify({'data': data})
+
+
+@app.route('/api/champdata')
+def champdata():
+    cursor.execute("""SELECT name, ranked_play_enabled,bot_enabled,free_to_play
+    FROM "league"."champname" AS N
+    FULL JOIN "league"."champion" AS C
+    ON N.id = C.champ_id
+    ;""")
+    data = [{'name': name,
+            'ranked_paly_enabled': ranked_play_enabled,
+            'bot_enabled': bot_enabled,
+            'free_to_play': free_to_play}
+            for (name, ranked_play_enabled, bot_enabled, free_to_play) in cursor.fetchall()]
+
+
 @app.route('/api/freeChamps')
 def freechamps():
     cursor.execute("""SELECT CN.Name
