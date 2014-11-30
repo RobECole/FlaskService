@@ -7,8 +7,6 @@ conn = psycopg2.connect(conn_string)
 cursor = conn.cursor()
 
 
-#comment
-
 @app.route('/api/lastGame/<int:summonerid>')
 def lastgame(summonerid):
     cursor.execute("""SELECT M.summoner_id,C.name, S.kills
@@ -45,6 +43,22 @@ def topkills():
             for (summoner_name, name, kills) in cursor.fetchall()]
     print top
     return jsonify({'top': top})
+
+
+@app.route('/api/champdata')
+def champdata():
+    cursor.execute("""SELECT name, ranked_play_enabled,bot_enabled,free_to_play
+    FROM "league"."champname" AS N
+    FULL JOIN "league"."champion" AS C
+    ON N.id = C.champ_id
+    ;""")
+    champ = [{'name': name,
+            'ranked_paly_enabled': ranked_play_enabled,
+            'bot_enabled': bot_enabled,
+            'free_to_play': free_to_play}
+            for (name, ranked_play_enabled, bot_enabled, free_to_play) in cursor.fetchall()]
+    print champ
+    return jsonify({'champ': champ})
 
 
 @app.route('/api/freeChamps')
