@@ -30,26 +30,27 @@ def lastgame(summonerid):
 
 @app.route('/api/pleb')
 def pleb():
-    cursor.execute("""SELECT P.summoner_name
+    cursor.execute("""SELECT M.Summoner_id, M.champion_id
     FROM "league"."player" AS P, "league"."match" AS M, "league"."champname" AS C
     WHERE P.game_id = M.match_id AND M.champion_id = ANY (SELECT champ_id
     FROM "league"."champion"
     WHERE free_to_play='true')
-    GROUP BY P.summoner_name
+    GROUP BY M.Summoner_id, M.champion_id
     ;""")
-    pleb = [{'sumname': summoner_name} for (summoner_name,) in cursor.fetchall()]
+    pleb = [{'sumname': summoner_name, 'champname': champion_id} for (summoner_name, champion_id) in cursor.fetchall()]
     print pleb
     return jsonify({'pleb': pleb})
 
 
 @app.route('/api/topkills/<matchid>')
 def topkills(matchid):
-    cursor.execute("""SELECT P.Summoner_name,C.name, S.kills
+    cursor.execute("""SELECT M.summoner_id,C.name, S.kills
     FROM "league"."player" AS P, "league"."match_stats" AS S, "league"."champname" AS C, "league"."match" AS M
-    WHERE M.match_id = '{0}' AND P.game_id = M.match_id AND P.summoner_id = M.summoner_id AND M.participant_id = S.participant_id AND C.id = S.champion_id AND S.kills > (
+    WHERE '{0}' = M.match_id AND M.match_id = S.match_id AND M.participant_id = S.participant_id AND C.id = S.champion_id AND S.kills > (
      SELECT AVG(kills)
-     from "league"."match_stats")
-    GROUP BY P.summoner_name,C.name, S.kills ORDER BY P.summoner_name
+     from "league"."match_stats" AS MS,"league"."match" AS LM
+     WHERE LM.match_id = '{0}' AND LM.match_id = MS.match_id AND LM.participant_id = MS.participant_id)
+    GROUP BY M.summoner_id,C.name, S.kills ORDER BY M.summoner_id
     ;""".format(matchid))
     top = [{'sumname': summoner_name,
              'champname': name,
@@ -73,7 +74,7 @@ def champdata():
             for (name, ranked_play_enabled, bot_enabled, free_to_play) in cursor.fetchall()]
     print champ
     return jsonify({'champ': champ})
-#tat
+
 
 @app.route('/api/freeChamps')
 def freechamps():
@@ -98,6 +99,14 @@ def fastmatch():
     fast = [{'name': name} for (name,) in cursor.fetchall()]
     print fast
     return jsonify({'fast': fast})
+
+
+@app.route('/api/count')
+def teamcount():
+    cursor.execute("""SELECT COUNT(id) FROM "league"."teamlist" WHERE sumid = 1 ;""")
+    count = [{'count': count} for (count,) in cursor.fetchall()]
+    print count
+    return jsonify({'count': count})
 
 
 if __name__ == '__main__':
