@@ -72,7 +72,18 @@ def freechamps():
     return jsonify({'data': data})
 
 
-
+@app.route('/api/fastmatch')
+def fastmatch():
+    cursor.execute("""SELECT P.Summoner_id
+    FROM "league"."player" AS P
+    EXCEPT
+    SELECT M.Summoner_id
+    FROM "league"."match" AS M
+    WHERE duration<1200
+    ;""")
+    data = [{'name': name} for (name,) in cursor.fetchall()]
+    print data
+    return jsonify({'data': data})
 
 
 if __name__ == '__main__':
