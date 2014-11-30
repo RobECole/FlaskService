@@ -89,25 +89,41 @@ def freechamps():
 
 @app.route('/api/fastmatch')
 def fastmatch():
-    cursor.execute("""SELECT P.Summoner_id
-    FROM "league"."player" AS P
+    cursor.execute("""SELECT P.Summoner_id, M.Duration
+    FROM "league"."player" AS P, "league"."match" as M
+    WHERE P.Summoner_id = M.Summoner_id AND P.summoner_id = '{0}'
     EXCEPT
-    SELECT M.Summoner_id
-    FROM "league"."match" AS M
-    WHERE duration<1200
-    ;""")
+    SELECT LM.Summoner_id, LM.Duration
+    FROM "league"."match" as LM
+    WHERE LM.duration<1200
+    ;""".format(id))
     fast = [{'name': name} for (name,) in cursor.fetchall()]
     print fast
     return jsonify({'fast': fast})
 
 
-@app.route('/api/count')
-def teamcount():
-    cursor.execute("""SELECT COUNT(id) FROM "league"."teamlist" WHERE sumid = 1 ;""")
+@app.route('/api/wins/<int:id>')
+def wins(id):
+    cursor.execute(""" SELECT unranked_win, ranked_win3v3, ranked_win5v5
+    FROM "league"."player"
+    WHERE summoner_id = '{0}';""".format(id))
+    wins = [{'unranked': unranked_win,
+             'ranked 3': ranked_win3v3,
+             'ranked5': ranked_win5v5} for (unranked_win, ranked_win3v3, ranked_win5v5) in cursor.fetchall()]
+    print wins
+    return jsonify({'wins': wins})
+
+
+@app.route('/api/count/<sumname>')
+def teamcount(sumname):
+    cursor.execute("""SELECT COUNT(id) FROM "league"."teamlist" WHERE sumid = '{0}' ;""").format(sumname)
     count = [{'count': count} for (count,) in cursor.fetchall()]
     print count
     return jsonify({'count': count})
 
 
+@app.route('/api/secondarystats/<int:matchid>')
+def secondarystats(matchid):
+    cursor.execute("""SELECT C.name, M.creep_)
 if __name__ == '__main__':
     app.run(port=5001, debug=True)
