@@ -31,7 +31,7 @@ def freechamps():
 
 class connect():
 
-    conn_string = "host='localhost' dbname='league_circuit' user='postgres' password='testdb'"
+    conn_string = "host='localhost' dbname='LEAGUE_CIRCUIT' user='postgres' password='testdb'"
     conn = psycopg2.connect(conn_string)
     cursor = conn.cursor()
 
