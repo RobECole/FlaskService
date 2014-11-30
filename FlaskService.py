@@ -28,6 +28,20 @@ def lastgame(summonerid):
     return jsonify({'last': last})
 
 
+@app.route('/api/pleb')
+def pleb():
+    cursor.execute("""SELECT P.summoner_name
+    FROM "league"."player" AS P, "league"."match" AS M, "league"."champname" AS C
+    WHERE P.game_id = M.match_id AND M.champion_id = ANY (SELECT champ_id
+    FROM "league"."champion"
+    WHERE free_to_play='true')
+    GROUP BY P.summoner_name
+    ;""")
+    pleb = [{'sumname': summoner_name} for (summoner_name,) in cursor.fetchall()]
+    print pleb
+    return jsonify({'pleb': pleb})
+
+
 @app.route('/api/topkills')
 def topkills():
     cursor.execute("""SELECT P.Summoner_name,C.name, S.kills
@@ -81,9 +95,9 @@ def fastmatch():
     FROM "league"."match" AS M
     WHERE duration<1200
     ;""")
-    data = [{'name': name} for (name,) in cursor.fetchall()]
-    print data
-    return jsonify({'data': data})
+    fast = [{'name': name} for (name,) in cursor.fetchall()]
+    print fast
+    return jsonify({'fast': fast})
 
 
 if __name__ == '__main__':
