@@ -1,39 +1,56 @@
-from flask import Flask
+from flask import Flask, jsonify
 import json
 import psycopg2
+import requests
+import riotwatcher
 app = Flask(__name__)
 
-tasks = [
-    {
-        "description": "Milk, Cheese, Pizza, Fruit, Tylenol",
-        "done": False,
-        "id": 1,
-        "title": "Buy groceries"
-    },
-    {
-        'id': 2,
-        'title': 'Learn Python',
-        'description': 'Need to find a good Python tutorial on the web',
-        'done': False
-    }
-]
-@app.route('/api/test', methods=['GET'])
-def test():
-    return json.dumps(tasks)
+conn_string = "host='localhost' dbname='LEAGUE_CIRCUIT' user='postgres' password='testdb'"
+conn = psycopg2.connect(conn_string)
+cursor = conn.cursor()
+key = '1dbf97cc-5028-4196-a05c-6645adc80bef'
+w = riotwatcher.RiotWatcher(key)
 
-@app.route('/api/freeChamps', methods=['GET'])
+
+@app.route('/api/update/<name>', methods=['GET'])
+def update(name):
+
+    summonerdata = w.get_summoner(name)
+    id = summonerdata['id']
+    match_history = w.get_match_history(id)
+    if 'matches' in match_history:
+        matches = match_history['matches']
+        matches.reverse()
+        match_id = matches[0]['matchId']
+
+
+@app.route('/api/lastGame', methods=['GET', 'POST'])
+def lastgame():
+    cursor.execute("""SELECT P.summoner_name,C.name, S.kills
+    FROM "league"."player" AS P
+    LEFT JOIN "league"."match_stats" AS S
+    ON P.Recent_games_id=S.Match_id AND P.summoner_id = S.summoner_id
+    LEFT JOIN "league"."champname" AS C
+    ON S.champion_id = C.id
+    WHERE P.summoner_id = 45979934
+    ;""")
+
+
+
+
+@app.route('/api/freeChamps', methods=['GET', 'POST'])
 def freechamps():
-    connect.cursor.execute("SELECT CN.Name FROM LEAGUE.CHAMPION AS C RIGHT JOIN LEAGUE.CHAMPNAME AS CN ON CN.ID = C.Champ_id WHERE Free_to_play = 'true'")
-    record = connect.cursor.fetchall()
-    print record
-    return json.dumps(record)
+    cursor.execute("""SELECT CN.Name
+    FROM LEAGUE.CHAMPION AS C
+    RIGHT JOIN LEAGUE.CHAMPNAME AS CN ON CN.ID = C.Champ_id
+    WHERE Free_to_play = 'true'""")
+    data = [{'name': name} for (name,) in cursor.fetchall()]
+    print data
+    return jsonify({'data': data})
 
 
-class connect():
 
-    conn_string = "host='localhost' dbname='league_circuit' user='postgres' password='testdb'"
-    conn = psycopg2.connect(conn_string)
-    cursor = conn.cursor()
+
 
 if __name__ == '__main__':
     app.run(port=5001, debug=True)
