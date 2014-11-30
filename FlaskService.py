@@ -9,6 +9,7 @@ cursor = conn.cursor()
 key = '1dbf97cc-5028-4196-a05c-6645adc80bef'
 w = riotwatcher.RiotWatcher(key)
 
+#comment
 
 @app.route('/api/lastGame/<int:summonerid>')
 def lastgame(summonerid):
