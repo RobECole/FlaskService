@@ -108,7 +108,7 @@ def wins(id):
     FROM "league"."player"
     WHERE summoner_id = '{0}';""".format(id))
     wins = [{'unranked': unranked_win,
-             'ranked 3': ranked_win3v3,
+             'ranked3': ranked_win3v3,
              'ranked5': ranked_win5v5} for (unranked_win, ranked_win3v3, ranked_win5v5) in cursor.fetchall()]
     print wins
     return jsonify({'wins': wins})
@@ -136,6 +136,20 @@ def secondarystats(matchid):
     print secondary
     return jsonify({'secondary': secondary})
 
+
+@app.route('/api/kdr/<int:matchid>')
+def kdr(matchid):
+    cursor.execute("""SELECT M.summoner_id, S.champion_id, S.kills, s.deaths
+FROM "league"."match" AS M, "league"."match_stats" AS S
+WHERE S.match_id = '{0}' AND S.match_id = M.match_id AND s.participant_id = M.participant_id
+""".format(matchid))
+    kdr = [{'sumid': summoner_id, 'cid': champion_id, 'kills': kills, 'deaths':deaths} for (summoner_id, champion_id, kills, deaths) in cursor.fetchall()]
+    print kdr
+    for x in xrange(len(kdr)):
+        if kdr[x].get('deaths') == 0:
+            kdr[x]['deaths'] = 1
+        print kdr[x].get('deaths')
+    return jsonify({'kdr': kdr})
 
 
 if __name__ == '__main__':
