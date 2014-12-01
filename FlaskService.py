@@ -28,15 +28,15 @@ def lastgame(summonerid):
     return jsonify({'last': last})
 
 
-@app.route('/api/pleb')
-def pleb():
-    cursor.execute("""SELECT M.Summoner_id, M.champion_id
+@app.route('/api/pleb/<matchid>')
+def pleb(matchid):
+    cursor.execute("""SELECT M.Summoner_id, C.name
     FROM "league"."player" AS P, "league"."match" AS M, "league"."champname" AS C
-    WHERE P.game_id = M.match_id AND M.champion_id = ANY (SELECT champ_id
+    WHERE M.match_id = '{0}' AND M.champion_id = C.id AND  M.champion_id = ANY (SELECT champ_id
     FROM "league"."champion"
     WHERE free_to_play='true')
-    GROUP BY M.Summoner_id, M.champion_id
-    ;""")
+    GROUP BY M.Summoner_id, C.name
+    ;""".format(matchid))
     pleb = [{'sumname': summoner_name, 'champname': champion_id} for (summoner_name, champion_id) in cursor.fetchall()]
     print pleb
     return jsonify({'pleb': pleb})
@@ -89,7 +89,7 @@ def freechamps():
 
 @app.route('/api/fastmatch/<int:sumid>')
 def fastmatch(sumid):
-    cursor.execute("""SELECT P.Summoner_id, M.Duration
+    cursor.execute("""SELECT M.match_id, M.Duration
     FROM "league"."player" AS P, "league"."match" as M
     WHERE P.Summoner_id = M.Summoner_id AND P.summoner_id = '{0}'
     EXCEPT
@@ -116,10 +116,14 @@ def wins(id):
 
 @app.route('/api/count/<int:id>')
 def teamcount(id):
-    cursor.execute("""SELECT COUNT(id)
-    FROM "league"."teamlist"
-    WHERE sumid = '{0}';""".format(id))
-    count = [{'count': count} for (count,) in cursor.fetchall()]
+    cursor.execute("""SELECT T.team_name, T.wins3v3, T.losses3v3, T.wins5v5, T.losses5v5
+FROM "league"."team" AS T, "league"."teamlist" as L
+WHERE T.team_id = L.id AND L.sumid = '{0}';""".format(id))
+    count = [{'name': team_name,
+              'w3v3': wins3v3,
+              'l3v3': losses3v3,
+              'w5v5': wins5v5,
+              'l5v5': losses5v5} for (team_name, wins3v3, losses3v3, wins5v5, losses5v5) in cursor.fetchall()]
     print count
     return jsonify({'count': count})
 
@@ -139,16 +143,17 @@ def secondarystats(matchid):
 
 @app.route('/api/kdr/<int:matchid>')
 def kdr(matchid):
-    cursor.execute("""SELECT M.summoner_id, S.champion_id, S.kills, s.deaths
-FROM "league"."match" AS M, "league"."match_stats" AS S
-WHERE S.match_id = '{0}' AND S.match_id = M.match_id AND s.participant_id = M.participant_id
+    cursor.execute("""SELECT M.summoner_id, C.name, S.kills, s.deaths
+FROM "league"."match" AS M, "league"."match_stats" AS S, "league"."champname" AS C
+WHERE S.match_id = '{0}' AND S.match_id = M.match_id AND s.participant_id = M.participant_id AND S.champion_id = C.id
 """.format(matchid))
-    kdr = [{'sumid': summoner_id, 'cid': champion_id, 'kills': kills, 'deaths':deaths} for (summoner_id, champion_id, kills, deaths) in cursor.fetchall()]
-    print kdr
+    kdr = [{'sumid': summoner_id, 'cid': champion_id, 'kills': kills, 'deaths': deaths} for (summoner_id, champion_id, kills, deaths) in cursor.fetchall()]
     for x in xrange(len(kdr)):
         if kdr[x].get('deaths') == 0:
             kdr[x]['deaths'] = 1
         print kdr[x].get('deaths')
+        kdr[x]['kills'] = kdr[x].get('kills')/float(kdr[x].get('deaths'))
+        kdr[x]['kills'] = float("{0:.2}".format(kdr[x].get('kills')))
     return jsonify({'kdr': kdr})
 
 
