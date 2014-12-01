@@ -87,8 +87,8 @@ def freechamps():
     return jsonify({'data': data})
 
 
-@app.route('/api/fastmatch')
-def fastmatch():
+@app.route('/api/fastmatch/<int:sumid>')
+def fastmatch(sumid):
     cursor.execute("""SELECT P.Summoner_id, M.Duration
     FROM "league"."player" AS P, "league"."match" as M
     WHERE P.Summoner_id = M.Summoner_id AND P.summoner_id = '{0}'
@@ -96,8 +96,8 @@ def fastmatch():
     SELECT LM.Summoner_id, LM.Duration
     FROM "league"."match" as LM
     WHERE LM.duration<1200
-    ;""".format(id))
-    fast = [{'name': name} for (name,) in cursor.fetchall()]
+    ;""".format(sumid))
+    fast = [{'name': summoner_id, 'duration': Duration} for (summoner_id, Duration) in cursor.fetchall()]
     print fast
     return jsonify({'fast': fast})
 
@@ -114,9 +114,11 @@ def wins(id):
     return jsonify({'wins': wins})
 
 
-@app.route('/api/count/<sumname>')
-def teamcount(sumname):
-    cursor.execute("""SELECT COUNT(id) FROM "league"."teamlist" WHERE sumid = '{0}' ;""").format(sumname)
+@app.route('/api/count/<int:id>')
+def teamcount(id):
+    cursor.execute("""SELECT COUNT(id)
+    FROM "league"."teamlist"
+    WHERE sumid = '{0}';""".format(id))
     count = [{'count': count} for (count,) in cursor.fetchall()]
     print count
     return jsonify({'count': count})
@@ -124,6 +126,17 @@ def teamcount(sumname):
 
 @app.route('/api/secondarystats/<int:matchid>')
 def secondarystats(matchid):
-    cursor.execute("""SELECT C.name, M.creep_)
+    cursor.execute("""SELECT C.name, M.creep_kills, M.gold_earned, M.damage_dealt_to_champs
+    FROM "league"."match_stats" AS M, "league"."champname" AS C
+    WHERE M.match_id = '{0}' AND C.id = M.champion_id;""".format(matchid))
+    secondary = [{'name': name,
+                  'creep': creep_kills,
+                  'gold': gold_earned,
+                  'damage': damage_dealt_to_champs} for (name, creep_kills, gold_earned, damage_dealt_to_champs,) in cursor.fetchall()]
+    print secondary
+    return jsonify({'secondary': secondary})
+
+
+
 if __name__ == '__main__':
     app.run(port=5001, debug=True)
