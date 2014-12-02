@@ -93,18 +93,23 @@ def fastmatch(sumid):
     FROM "league"."player" AS P, "league"."match" as M
     WHERE P.Summoner_id = M.Summoner_id AND P.summoner_id = '{0}'
     EXCEPT
-    SELECT LM.Summoner_id, LM.Duration
+    SELECT LM.match_id, LM.Duration
     FROM "league"."match" as LM
     WHERE LM.duration<1200
     ;""".format(sumid))
     fast = [{'name': summoner_id, 'duration': Duration} for (summoner_id, Duration) in cursor.fetchall()]
+    for x in range(len(fast)):
+        if fast[x].get('duration')%60 <10:
+            fast[x]['duration'] = "{0}:0{1}".format(fast[x].get('duration')/60, fast[x].get('duration')%60)
+        else:
+            fast[x]['duration'] = "{0}:{1}".format(fast[x].get('duration')/60, fast[x].get('duration')%60)
     print fast
     return jsonify({'fast': fast})
 
 
 @app.route('/api/wins/<int:id>')
 def wins(id):
-    cursor.execute(""" SELECT unranked_win, ranked_win3v3, ranked_win5v5
+    cursor.execute("""SELECT unranked_win, ranked_win3v3, ranked_win5v5
     FROM "league"."player"
     WHERE summoner_id = '{0}';""".format(id))
     wins = [{'unranked': unranked_win,
